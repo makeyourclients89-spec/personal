@@ -1,0 +1,15 @@
+<!-- Merge these entries inside the generated app's <manifest> and <application>. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <application>
+        <service
+            android:name=".CallScreeningServiceImpl"
+            android:label="Call Detection"
+            android:permission="android.permission.BIND_SCREENING_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

@@ -1,0 +1,3 @@
+यह source-code starter package है, compiled APK नहीं।
+पुराने download link के काम न करने के कारण नया ZIP पैकेज बनाया गया है।
+कृपया पहले README_HINDI.md पढ़ें।
