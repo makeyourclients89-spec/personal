@@ -29,9 +29,9 @@ class CallAssistantApp extends StatelessWidget {
           surface: const Color(0xFFF8FAFC),
         ),
         useMaterial3: true,
-        cardTheme: CardTheme(
+        cardTheme: const CardThemeData(
           elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
         ),
       ),
       home: const HomeScreen(),
@@ -309,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 realCallState = 'IDLE';
               });
             },
-            style: FilledButton.tonalFrom(backgroundColor: Colors.white, foregroundColor: Colors.black87),
+            style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black87),
             child: const Text('Dismiss'),
           ),
         ],
