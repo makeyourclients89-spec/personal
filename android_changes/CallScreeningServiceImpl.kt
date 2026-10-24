@@ -7,13 +7,19 @@ import android.util.Log
 class CallScreeningServiceImpl : CallScreeningService() {
     override fun onScreenCall(details: Call.Details) {
         val handle = details.handle
-        Log.i("CallDetection", "Screened call received; handle available=${handle != null}")
-        // This starter service allows the call by default. It does not answer,
-        // reject, record, route, or transmit call audio.
+        val number = handle?.schemeSpecificPart ?: "Unknown Caller"
+        Log.i("CallDetection", "CallScreeningService screened call from: $number")
+        
+        // Broadcast screened call to Flutter UI
+        MainActivity.sendScreenedCall(number, true)
+
+        // Allow call through by default; does not reject or silence
         val response = CallResponse.Builder()
             .setDisallowCall(false)
             .setRejectCall(false)
             .setSilenceCall(false)
+            .setSkipCallLog(false)
+            .setSkipNotification(false)
             .build()
         respondToCall(details, response)
     }
