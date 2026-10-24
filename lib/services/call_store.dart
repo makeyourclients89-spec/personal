@@ -16,6 +16,17 @@ class CallStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearRecords() {
+    _records.clear();
+    notifyListeners();
+  }
+
+  void resetInitialRecords() {
+    _records.clear();
+    _loadInitialRecords();
+    notifyListeners();
+  }
+
   void _loadInitialRecords() {
     _records.addAll([
       CallRecord(
@@ -30,6 +41,8 @@ class CallStore extends ChangeNotifier {
         aiSummary: 'Delivery partner Ramesh ne reach karne par call kiya. AI assistant ne instruction diya ki package main gate guard ko submit karein. Order successfully handed over.',
         urgency: 'Low',
         isSimulated: true,
+        hasRecording: true,
+        recordingDuration: const Duration(seconds: 42),
         transcript: [
           TranscriptEntry(speaker: 'ai', text: 'Namaste! Main user ka AI Call Assistant hoon. Kahiye kis baare me call kiya hai?'),
           TranscriptEntry(speaker: 'caller', text: 'Bhaiya Swiggy se hoon. Flat 302 par delivery hai, security gate par khada hoon.'),
@@ -50,6 +63,8 @@ class CallStore extends ChangeNotifier {
         aiSummary: 'Telemarketing executive ne credit card offer pitch kiya. AI assistant ne politely refuse karke phone number ko DND me add karne ka request initiate kiya.',
         urgency: 'None',
         isSimulated: true,
+        hasRecording: true,
+        recordingDuration: const Duration(seconds: 28),
         transcript: [
           TranscriptEntry(speaker: 'ai', text: 'Namaste! Main AI Assistant hoon. Aap kis vishay par baat karna chahte hain?'),
           TranscriptEntry(speaker: 'caller', text: 'Hello sir, HDFC Bank ki taraf se Lifetime Free Credit Card offer hai.'),

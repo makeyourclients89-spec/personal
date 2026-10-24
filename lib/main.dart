@@ -581,10 +581,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? Colors.blue.withOpacity(0.15)
                   : (record.category == 'Fraud / Spam' ? Colors.red.withOpacity(0.15) : Colors.purple.withOpacity(0.15))),
           child: Icon(
-            record.status == CallStatus.aiScreened
-                ? Icons.auto_awesome
-                : (record.status == CallStatus.declined ? Icons.call_end : Icons.phone_callback),
-            color: Colors.indigo,
+            record.status == CallStatus.takenOver
+                ? Icons.phone_forwarded
+                : (record.status == CallStatus.directUser
+                    ? Icons.call
+                    : (record.status == CallStatus.declined ? Icons.call_end : Icons.auto_awesome)),
+            color: record.status == CallStatus.takenOver || record.status == CallStatus.directUser ? Colors.green : Colors.indigo,
             size: 20,
           ),
         ),
@@ -596,6 +598,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
+            if (record.hasRecording) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.mic, size: 10, color: Colors.redAccent),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${record.recordingDuration.inSeconds}s',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(

@@ -28,6 +28,7 @@ enum CallStatus {
   declined,
   missed,
   realScreened,
+  directUser,
 }
 
 class CallRecord {
@@ -43,6 +44,8 @@ class CallRecord {
   final String urgency;
   final List<TranscriptEntry> transcript;
   final bool isSimulated;
+  final bool hasRecording;
+  final Duration recordingDuration;
 
   CallRecord({
     required this.id,
@@ -57,7 +60,9 @@ class CallRecord {
     required this.urgency,
     required this.transcript,
     this.isSimulated = true,
-  });
+    this.hasRecording = true,
+    Duration? recordingDuration,
+  }) : recordingDuration = recordingDuration ?? duration;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -72,6 +77,8 @@ class CallRecord {
     'urgency': urgency,
     'transcript': transcript.map((t) => t.toJson()).toList(),
     'isSimulated': isSimulated,
+    'hasRecording': hasRecording,
+    'recordingDurationSeconds': recordingDuration.inSeconds,
   };
 
   factory CallRecord.fromJson(Map<String, dynamic> json) => CallRecord(
@@ -92,5 +99,7 @@ class CallRecord {
         .map((e) => TranscriptEntry.fromJson(e as Map<String, dynamic>))
         .toList(),
     isSimulated: json['isSimulated'] ?? true,
+    hasRecording: json['hasRecording'] ?? true,
+    recordingDuration: Duration(seconds: json['recordingDurationSeconds'] ?? (json['durationSeconds'] ?? 0)),
   );
 }
