@@ -20,7 +20,11 @@ import com.example.callassistant.data.CallRepository
 import com.example.callassistant.databinding.ActivityMainBinding
 import com.example.callassistant.model.CallRecord
 import com.example.callassistant.model.CallerPersona
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import com.example.callassistant.voip.TwilioVoiceManager
+import com.example.callassistant.voip.WebCallBridgeManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -65,7 +69,42 @@ class MainActivity : AppCompatActivity() {
             requestRequiredPermissions()
         }
 
+        setupWebCallingCard()
+
         binding.rvRecentCalls.layoutManager = LinearLayoutManager(this)
+    }
+
+    private fun setupWebCallingCard() {
+        val callUrl = WebCallBridgeManager.getWebCallingUrl()
+        binding.tvWebCallUrl.text = callUrl
+
+        binding.btnCopyLink.setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Calling Link", callUrl)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "Calling link copied to clipboard!", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnShareLink.setOnClickListener {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Free AI Call Assistant")
+                putExtra(Intent.EXTRA_TEXT, "Call my AI Assistant for free by opening this link: $callUrl")
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share Calling Link via"))
+        }
+
+        WebCallBridgeManager.isConnected.observe(this) { connected ->
+            if (connected) {
+                binding.tvBridgeStatus.text = "Live Ready"
+                binding.tvBridgeStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+                binding.tvBridgeStatus.setBackgroundColor(0xFFDCFCE7.toInt())
+            } else {
+                binding.tvBridgeStatus.text = "Connecting..."
+                binding.tvBridgeStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+                binding.tvBridgeStatus.setBackgroundColor(0xFFFEF3C7.toInt())
+            }
+        }
     }
 
     private fun observeData() {

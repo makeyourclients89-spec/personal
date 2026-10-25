@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 const { CallSession, CallState } = require('./state_machine');
 const { AiVoiceAgent } = require('./ai_voice_agent');
@@ -11,7 +12,27 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/media-stream' });
+const wssMedia = new WebSocketServer({ noServer: true });
+const wssBridge = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const parsedUrl = new URL(request.url, `http://${request.headers.host}`);
+    if (parsedUrl.pathname === '/media-stream') {
+      wssMedia.handleUpgrade(request, socket, head, (ws) => {
+        wssMedia.emit('connection', ws, request);
+      });
+    } else if (parsedUrl.pathname === '/app-bridge') {
+      wssBridge.handleUpgrade(request, socket, head, (ws) => {
+        wssBridge.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  } catch (_) {
+    socket.destroy();
+  }
+});
 
 // In-memory active call sessions
 const activeSessions = new Map();
@@ -171,8 +192,22 @@ app.get('/api/calls/:callSid', (req, res) => {
   res.status(404).json({ error: 'Call not found' });
 });
 
-// WebSocket Handler for Real-Time Bidirectional AI Media Streaming
-wss.on('connection', (ws) => {
+// 10. Web Calling UI & Call Info Endpoints (Free testing without Twilio)
+app.get('/call', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web_caller.html'));
+});
+
+app.get('/api/web-call-info', (req, res) => {
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol || 'http';
+  res.json({
+    callUrl: `${protocol}://${host}/call`,
+    wsBridgeUrl: `${protocol === 'https' ? 'wss' : 'ws'}://${host}/app-bridge`
+  });
+});
+
+// WebSocket Handler 1: Twilio Media Streaming (/media-stream)
+wssMedia.on('connection', (ws) => {
   let agent = null;
 
   ws.on('message', (message) => {
@@ -195,6 +230,170 @@ wss.on('connection', (ws) => {
     if (agent && agent.session) {
       agent.session.complete();
       callStorage.save(agent.session.toJSON());
+    }
+  });
+});
+
+// WebSocket Handler 2: App & Web Signaling Bridge (/app-bridge)
+const androidClients = new Set();
+const webCallSessions = new Map();
+
+wssBridge.on('connection', (ws) => {
+  let boundCallSid = null;
+
+  ws.on('message', (raw) => {
+    try {
+      const data = JSON.parse(raw);
+
+      // Register Android App
+      if (data.event === 'REGISTER_ANDROID_APP') {
+        androidClients.add(ws);
+        ws.send(JSON.stringify({ event: 'REGISTERED', status: 'ready' }));
+        return;
+      }
+
+      // Web Caller initiates call
+      if (data.event === 'START_WEB_CALL') {
+        const callSid = data.callSid || `web_${Date.now()}`;
+        boundCallSid = callSid;
+        const callerName = data.callerName || 'Web Caller (Phone 2)';
+        const callerNumber = data.callerNumber || 'Free Calling Link';
+
+        const session = getOrCreateSession(callSid, callerNumber);
+        session.callerName = callerName;
+        const agent = new AiVoiceAgent(session, null);
+
+        webCallSessions.set(callSid, { webWs: ws, session, agent });
+
+        // Broadcast INCOMING_CALL to all connected Android apps
+        const incomingPayload = JSON.stringify({
+          event: 'INCOMING_CALL',
+          callSid,
+          callerName,
+          callerNumber,
+          timeoutSeconds: 10
+        });
+        for (const appWs of androidClients) {
+          if (appWs.readyState === 1) appWs.send(incomingPayload);
+        }
+
+        // Start server-controlled 10-second timeout
+        session.startTimeout((timedOutSession) => {
+          const active = webCallSessions.get(callSid);
+          if (active && active.session.state === CallState.AI_ANSWERED) {
+            const greeting = agent.defaultAiGreeting;
+            active.session.addTranscript('ai', greeting);
+
+            // Notify Web Caller that AI answered
+            if (active.webWs.readyState === 1) {
+              active.webWs.send(JSON.stringify({
+                event: 'AI_ANSWERED',
+                callSid,
+                greeting
+              }));
+            }
+
+            // Notify Android App that AI is screening
+            const aiNotify = JSON.stringify({
+              event: 'AI_ANSWERED',
+              callSid,
+              greeting,
+              transcripts: active.session.transcripts
+            });
+            for (const appWs of androidClients) {
+              if (appWs.readyState === 1) appWs.send(aiNotify);
+            }
+          }
+        });
+        return;
+      }
+
+      // Android user answers before 10s
+      if (data.event === 'USER_ANSWER') {
+        const callSid = data.callSid;
+        const active = webCallSessions.get(callSid);
+        if (active) {
+          const success = active.session.userAnswer();
+          if (success && active.webWs.readyState === 1) {
+            active.webWs.send(JSON.stringify({ event: 'HUMAN_ANSWERED', callSid }));
+          }
+        }
+        return;
+      }
+
+      // Web Caller speaks (STT text)
+      if (data.event === 'CALLER_SPEECH') {
+        const callSid = data.callSid;
+        const active = webCallSessions.get(callSid);
+        if (active && active.session.state === CallState.AI_ANSWERED) {
+          const reply = active.agent.processCallerUtterance(data.text);
+
+          // Reply back to Web Caller (Phone 2)
+          if (active.webWs.readyState === 1) {
+            active.webWs.send(JSON.stringify({
+              event: 'AI_RESPONSE',
+              callSid,
+              text: reply
+            }));
+          }
+
+          // Broadcast transcript update to Android App
+          const transcriptPayload = JSON.stringify({
+            event: 'TRANSCRIPT_UPDATE',
+            callSid,
+            callerText: data.text,
+            aiText: reply,
+            transcripts: active.session.transcripts
+          });
+          for (const appWs of androidClients) {
+            if (appWs.readyState === 1) appWs.send(transcriptPayload);
+          }
+        }
+        return;
+      }
+
+      // Android user taps "Take Over Call"
+      if (data.event === 'USER_TAKEOVER') {
+        const callSid = data.callSid;
+        const active = webCallSessions.get(callSid);
+        if (active) {
+          active.session.userTakeover();
+          if (active.webWs.readyState === 1) {
+            active.webWs.send(JSON.stringify({ event: 'USER_TAKEOVER', callSid }));
+          }
+        }
+        return;
+      }
+
+      // Call Ended
+      if (data.event === 'END_CALL') {
+        const callSid = data.callSid || boundCallSid;
+        const active = webCallSessions.get(callSid);
+        if (active) {
+          active.session.complete();
+          callStorage.save(active.session.toJSON());
+          webCallSessions.delete(callSid);
+          for (const appWs of androidClients) {
+            if (appWs.readyState === 1) {
+              appWs.send(JSON.stringify({ event: 'CALL_ENDED', callSid }));
+            }
+          }
+        }
+        return;
+      }
+
+    } catch (err) {
+      console.error('[App Bridge Error]', err);
+    }
+  });
+
+  ws.on('close', () => {
+    androidClients.delete(ws);
+    if (boundCallSid && webCallSessions.has(boundCallSid)) {
+      const active = webCallSessions.get(boundCallSid);
+      active.session.complete();
+      callStorage.save(active.session.toJSON());
+      webCallSessions.delete(boundCallSid);
     }
   });
 });

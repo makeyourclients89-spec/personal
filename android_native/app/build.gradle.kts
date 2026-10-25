@@ -56,6 +56,9 @@ dependencies {
     // Twilio Voice Android Native SDK
     implementation("com.twilio:voice-android:6.3.0")
 
+    // OkHttp for WebSocket Bridge
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 

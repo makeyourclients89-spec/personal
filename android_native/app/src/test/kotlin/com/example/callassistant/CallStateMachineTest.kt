@@ -77,4 +77,12 @@ class CallStateMachineTest {
         assertEquals("Drop at gate", record.keyIntent)
         assertEquals(2, record.transcript.size)
     }
+
+    @Test
+    fun testWebCallBridgeUrlGeneration() {
+        com.example.callassistant.voip.WebCallBridgeManager.serverHost = "192.168.1.41"
+        com.example.callassistant.voip.WebCallBridgeManager.serverPort = 3000
+        val url = com.example.callassistant.voip.WebCallBridgeManager.getWebCallingUrl()
+        assertEquals("http://192.168.1.41:3000/call", url)
+    }
 }

@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.callassistant.databinding.ActivityIncomingCallBinding
 import com.example.callassistant.model.CallStatus
 import com.example.callassistant.voip.TwilioVoiceManager
+import com.example.callassistant.voip.WebCallBridgeManager
 
 class IncomingCallActivity : AppCompatActivity() {
 
@@ -18,6 +19,7 @@ class IncomingCallActivity : AppCompatActivity() {
 
         val callerName = intent.getStringExtra("callerName") ?: "Unknown Caller"
         val callerNumber = intent.getStringExtra("callerNumber") ?: "+91 98765 43210"
+        val callSid = intent.getStringExtra("callSid") ?: ""
 
         binding.tvIncomingName.text = callerName
         binding.tvIncomingNumber.text = callerNumber
@@ -36,6 +38,7 @@ class IncomingCallActivity : AppCompatActivity() {
                     val activeIntent = Intent(this, ActiveCallActivity::class.java).apply {
                         putExtra("callerName", callerName)
                         putExtra("callerNumber", callerNumber)
+                        putExtra("callSid", callSid)
                     }
                     startActivity(activeIntent)
                     finish()
@@ -49,6 +52,9 @@ class IncomingCallActivity : AppCompatActivity() {
 
         // Action: Pick Call within 10s (Direct User Connect)
         binding.fabPick.setOnClickListener {
+            if (callSid.isNotEmpty()) {
+                WebCallBridgeManager.sendUserAnswer(callSid)
+            }
             TwilioVoiceManager.answerByUser()
         }
 
@@ -59,6 +65,9 @@ class IncomingCallActivity : AppCompatActivity() {
 
         // Action: Decline Call
         binding.fabDecline.setOnClickListener {
+            if (callSid.isNotEmpty()) {
+                WebCallBridgeManager.sendEndCall(callSid)
+            }
             TwilioVoiceManager.declineCall()
             finish()
         }

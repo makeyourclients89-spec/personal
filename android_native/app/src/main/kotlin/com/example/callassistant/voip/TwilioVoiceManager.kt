@@ -115,6 +115,15 @@ object TwilioVoiceManager {
         _currentTranscript.postValue(transcriptBuffer.toList())
     }
 
+    fun addExternalTranscript(speaker: String, text: String) {
+        val elapsedSec = if (callStartTime > 0) {
+            ((System.currentTimeMillis() - callStartTime) / 1000).toInt()
+        } else 0
+        val timestamp = String.format(Locale.getDefault(), "%02d:%02d", elapsedSec / 60, elapsedSec % 60)
+        transcriptBuffer.add(TranscriptItem(speaker, text, timestamp))
+        _currentTranscript.postValue(transcriptBuffer.toList())
+    }
+
     fun declineCall() {
         countdownTimer?.cancel()
         tts?.stop()

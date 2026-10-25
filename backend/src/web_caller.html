@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Call Ramesh • AI Call Assistant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .card { background: #1e293b; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); border: 1px solid #334155; }
+    .avatar { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 40px; font-weight: bold; color: white; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .badge { display: inline-block; background: #22c55e20; color: #4ade80; border: 1px solid #22c55e40; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 500; margin-bottom: 20px; }
+    .status-box { background: #0f172a; border-radius: 16px; padding: 16px; margin: 16px 0; border: 1px solid #334155; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .status-text { font-size: 15px; font-weight: 600; color: #38bdf8; }
+    .substatus { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .transcripts { max-height: 180px; overflow-y: auto; text-align: left; margin: 12px 0; padding: 8px; background: #0b1120; border-radius: 12px; font-size: 13px; display: none; }
+    .transcript-item { margin-bottom: 8px; padding: 6px 10px; border-radius: 8px; }
+    .transcript-ai { background: #6366f120; color: #c7d2fe; border-left: 3px solid #6366f1; }
+    .transcript-caller { background: #22c55e20; color: #bbf7d0; border-left: 3px solid #22c55e; }
+    .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-call { background: #22c55e; color: white; box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.4); }
+    .btn-call:hover { background: #16a34a; }
+    .btn-end { background: #ef4444; color: white; display: none; margin-top: 10px; box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4); }
+    .quick-replies { display: none; gap: 6px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
+    .quick-btn { background: #334155; color: #e2e8f0; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+    .quick-btn:hover { background: #475569; }
+    .pulse { animation: pulse-ring 2s infinite; }
+    @keyframes pulse-ring { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="avatar" id="avatarIcon">👤</div>
+    <h1>Ramesh Kumar</h1>
+    <div class="badge" id="availBadge">Free Direct Calling • AI Screening</div>
+
+    <div class="status-box" id="statusBox">
+      <div class="status-text" id="statusText">Ready to Call</div>
+      <div class="substatus" id="subStatus">Tap below to test 10s countdown & AI takeover</div>
+    </div>
+
+    <div class="transcripts" id="transcriptsBox"></div>
+
+    <div class="quick-replies" id="quickReplies">
+      <button class="quick-btn" onclick="sendSpokenText('Delivery boy gate pe khada hai, OTP de do')">📦 Swiggy/Zomato OTP</button>
+      <button class="quick-btn" onclick="sendSpokenText('Important business meeting call hai')">💼 Work Call</button>
+      <button class="quick-btn" onclick="sendSpokenText('Loan aur credit card offer hai')">💳 Bank Loan</button>
+    </div>
+
+    <button class="btn btn-call" id="btnCall" onclick="startCall()">
+      <span>📞</span> Start Voice Call
+    </button>
+    <button class="btn btn-end" id="btnEnd" onclick="endCall()">
+      <span>🛑</span> End Call
+    </button>
+  </div>
+
+  <script>
+    let ws = null;
+    let callSid = null;
+    let countdownInterval = null;
+    let audioCtx = null;
+    let ringOscillator = null;
+    let recognition = null;
+    let isCallActive = false;
+
+    function playRingbackTone() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        ringOscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        ringOscillator.type = 'sine';
+        ringOscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        ringOscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        ringOscillator.start();
+      } catch (e) {}
+    }
+
+    function stopRingbackTone() {
+      try {
+        if (ringOscillator) {
+          ringOscillator.stop();
+          ringOscillator.disconnect();
+          ringOscillator = null;
+        }
+      } catch (e) {}
+    }
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'hi-IN';
+        utterance.rate = 1.0;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function initSpeechRecognition() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRec) {
+        recognition = new SpeechRec();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'hi-IN';
+        recognition.onresult = (event) => {
+          const last = event.results.length - 1;
+          const text = event.results[last][0].transcript;
+          if (text && text.trim().length > 0) {
+            sendSpokenText(text);
+          }
+        };
+        recognition.onerror = () => {};
+        try { recognition.start(); } catch (_) {}
+      }
+    }
+
+    function addTranscript(speaker, text) {
+      const box = document.getElementById('transcriptsBox');
+      box.style.display = 'block';
+      const item = document.createElement('div');
+      item.className = 'transcript-item ' + (speaker === 'AI' ? 'transcript-ai' : 'transcript-caller');
+      item.innerHTML = '<strong>' + speaker + ':</strong> ' + text;
+      box.appendChild(item);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function startCall() {
+      isCallActive = true;
+      callSid = 'web_call_' + Date.now();
+      document.getElementById('btnCall').style.display = 'none';
+      document.getElementById('btnEnd').style.display = 'flex';
+      document.getElementById('quickReplies').style.display = 'flex';
+      document.getElementById('transcriptsBox').innerHTML = '';
+      document.getElementById('avatarIcon').classList.add('pulse');
+
+      playRingbackTone();
+
+      // Connect to WebSocket signaling bridge
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(protocol + '//' + window.location.host + '/app-bridge');
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          event: 'START_WEB_CALL',
+          callSid: callSid,
+          callerName: 'Web Caller (Phone 2)',
+          callerNumber: 'Free Web Link'
+        }));
+      };
+
+      let secondsLeft = 10;
+      document.getElementById('statusText').innerText = 'Ringing Ramesh\'s Phone...';
+      document.getElementById('subStatus').innerText = '10s Countdown: ' + secondsLeft + 's';
+
+      countdownInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft > 0) {
+          document.getElementById('subStatus').innerText = '10s Countdown: ' + secondsLeft + 's (Waiting for answer)';
+        } else {
+          clearInterval(countdownInterval);
+        }
+      }, 1000);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.event === 'HUMAN_ANSWERED') {
+            stopRingbackTone();
+            clearInterval(countdownInterval);
+            document.getElementById('statusText').innerText = 'Ramesh Answered!';
+            document.getElementById('statusText').style.color = '#4ade80';
+            document.getElementById('subStatus').innerText = 'Speaking directly with user';
+            speakText('Call connected with Ramesh');
+            initSpeechRecognition();
+          } else if (msg.event === 'AI_ANSWERED') {
+            stopRingbackTone();
+            clearInterval(countdownInterval);
+            document.getElementById('statusText').innerText = 'AI Voice Assistant Answered';
+            document.getElementById('statusText').style.color = '#c084fc';
+            document.getElementById('subStatus').innerText = 'AI screening active (Listening to you)';
+            addTranscript('AI', msg.greeting || 'Namaste! Main Ramesh ji ka AI assistant hoon. Ramesh ji abhi phone nahi utha pa rahe hain. Kya zaroori kaam hai?');
+            speakText(msg.greeting || 'Namaste! Main Ramesh ji ka AI assistant hoon. Ramesh ji abhi phone nahi utha pa rahe hain. Kya zaroori kaam hai?');
+            initSpeechRecognition();
+          } else if (msg.event === 'AI_RESPONSE') {
+            addTranscript('AI', msg.text);
+            speakText(msg.text);
+          } else if (msg.event === 'USER_TAKEOVER') {
+            document.getElementById('statusText').innerText = 'Ramesh Took Over Call!';
+            document.getElementById('statusText').style.color = '#22c55e';
+            document.getElementById('subStatus').innerText = 'User switched from AI to live conversation';
+            addTranscript('System', 'Ramesh pressed Take Over Call button');
+            speakText('Ramesh has joined the call directly.');
+          } else if (msg.event === 'CALL_ENDED') {
+            endCall();
+          }
+        } catch (_) {}
+      };
+
+      ws.onclose = () => {
+        if (isCallActive) endCall();
+      };
+    }
+
+    function sendSpokenText(text) {
+      if (!isCallActive || !ws) return;
+      addTranscript('Caller', text);
+      ws.send(JSON.stringify({
+        event: 'CALLER_SPEECH',
+        callSid: callSid,
+        text: text
+      }));
+    }
+
+    function endCall() {
+      isCallActive = false;
+      stopRingbackTone();
+      clearInterval(countdownInterval);
+      if (recognition) {
+        try { recognition.stop(); } catch (_) {}
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ event: 'END_CALL', callSid: callSid }));
+        ws.close();
+      }
+      document.getElementById('avatarIcon').classList.remove('pulse');
+      document.getElementById('btnCall').style.display = 'flex';
+      document.getElementById('btnEnd').style.display = 'none';
+      document.getElementById('quickReplies').style.display = 'none';
+      document.getElementById('statusText').innerText = 'Call Ended';
+      document.getElementById('statusText').style.color = '#94a3b8';
+      document.getElementById('subStatus').innerText = 'Transcript saved to Call Assistant App';
+    }
+  </script>
+</body>
+</html>

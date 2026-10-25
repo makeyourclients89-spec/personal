@@ -3,6 +3,7 @@ package com.example.callassistant
 import android.app.Application
 import com.example.callassistant.data.CallRepository
 import com.example.callassistant.voip.TwilioVoiceManager
+import com.example.callassistant.voip.WebCallBridgeManager
 
 class CallAssistantApplication : Application() {
 
@@ -10,5 +11,6 @@ class CallAssistantApplication : Application() {
         super.onCreate()
         CallRepository.init(this)
         TwilioVoiceManager.init(this)
+        WebCallBridgeManager.init(this)
     }
 }

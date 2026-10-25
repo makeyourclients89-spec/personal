@@ -159,6 +159,7 @@ class AiVoiceAgent {
 
     this.session.addTranscript('ai', replyText);
     this.streamAiSpeech(replyText);
+    return replyText;
   }
 
   streamAiSpeech(text) {

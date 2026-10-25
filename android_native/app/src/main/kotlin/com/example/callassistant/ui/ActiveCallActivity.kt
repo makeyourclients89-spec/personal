@@ -14,6 +14,7 @@ import com.example.callassistant.databinding.ActivityActiveCallBinding
 import com.example.callassistant.model.CallStatus
 import com.example.callassistant.model.TranscriptItem
 import com.example.callassistant.voip.TwilioVoiceManager
+import com.example.callassistant.voip.WebCallBridgeManager
 
 class ActiveCallActivity : AppCompatActivity() {
 
@@ -26,6 +27,7 @@ class ActiveCallActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val callerName = intent.getStringExtra("callerName") ?: "Caller"
+        val callSid = intent.getStringExtra("callSid") ?: ""
         binding.tvActiveCallerName.text = callerName
 
         binding.rvLiveTranscript.layoutManager = LinearLayoutManager(this).apply {
@@ -75,11 +77,17 @@ class ActiveCallActivity : AppCompatActivity() {
 
         // Action: TAKEOVER BUTTON
         binding.btnTakeoverCall.setOnClickListener {
+            if (callSid.isNotEmpty()) {
+                WebCallBridgeManager.sendUserTakeover(callSid)
+            }
             TwilioVoiceManager.takeOverCall()
         }
 
         // Action: End Call
         binding.btnEndCall.setOnClickListener {
+            if (callSid.isNotEmpty()) {
+                WebCallBridgeManager.sendEndCall(callSid)
+            }
             TwilioVoiceManager.endCall()
             finish()
         }
