@@ -18,3 +18,8 @@ android/app/build/
 # System
 .DS_Store
 Thumbs.db
+
+# Node.js
+backend/node_modules/
+node_modules/
+

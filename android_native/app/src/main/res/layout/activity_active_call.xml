@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:orientation="vertical">
+
+    <!-- Active Call Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface_dark"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvActiveCallerName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ramesh (Swiggy Delivery)"
+                    android:textColor="@color/text_white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvActiveCallStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AI Assistant Screening..."
+                    android:textColor="#818CF8"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Recording Badge -->
+            <TextView
+                android:id="@+id/tvLiveRecIndicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="#450A0A"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="🔴 REC"
+                android:textColor="#EF4444"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Live Summary Banner -->
+        <TextView
+            android:id="@+id/tvActiveLiveSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="#0F172A"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:padding="10dp"
+            android:text="Live Summary: AI assistant call screen kar raha hai..."
+            android:textColor="#FDE047"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Transcript RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvLiveTranscript"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp" />
+
+    <!-- Bottom Controls with TAKEOVER BUTTON -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface_dark"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Prominent TAKEOVER BUTTON -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTakeoverCall"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:backgroundTint="@color/green_call"
+            android:text="Take Over Call (Call Khud Uthayein)"
+            android:textColor="@color/text_white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp" />
+
+        <!-- End Call Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEndCall"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/red_decline"
+            android:text="End Call &amp; Save Recording"
+            android:textColor="@color/text_white"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,15 @@
+{
+  "name": "ai-call-assistant-backend",
+  "version": "1.0.0",
+  "description": "Native Android AI Calling Backend with Twilio Voice, 10s Timeout, Media Streams and AI Voice Pipeline",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {}
+}

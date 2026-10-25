@@ -1,0 +1,12 @@
+<resources>
+    <color name="primary">#1E1B4B</color>
+    <color name="primary_light">#312E81</color>
+    <color name="accent">#4F46E5</color>
+    <color name="green_call">#16A34A</color>
+    <color name="red_decline">#DC2626</color>
+    <color name="amber_takeover">#D97706</color>
+    <color name="background_dark">#0F172A</color>
+    <color name="surface_dark">#1E293B</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_muted">#94A3B8</color>
+</resources>

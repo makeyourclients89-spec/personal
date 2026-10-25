@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Native Android APK
 
 on:
   push:
@@ -8,10 +8,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Debug APK
+  backend-test:
+    name: Backend Unit Tests & Media Stream Check
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies & run tests
+        run: |
+          cd backend
+          npm install
+          npm test
+
+  build-android:
+    name: Build Native Android APK & Unit Tests
+    runs-on: ubuntu-latest
+    needs: backend-test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,35 +40,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./android_native/gradlew
 
-      - name: Create Android scaffolding
-        run: flutter create . --platforms=android --org com.example
+      - name: Run Native Android Unit Tests
+        run: |
+          cd android_native
+          ./gradlew testDebugUnitTest --no-daemon
 
-      - name: Apply native Call Detection changes
-        run: python setup_android.py
+      - name: Build Native Android Debug APK
+        run: |
+          cd android_native
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Run Unit Tests
-        run: flutter test
-
-      - name: Build APK (Debug)
-        run: flutter build apk --debug
-
-      - name: Upload APK Artifact
+      - name: Upload Native Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CallAssistant-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: NativeCallAssistant-debug-apk
+          path: android_native/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
