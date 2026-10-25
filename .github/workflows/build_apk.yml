@@ -88,12 +88,12 @@ jobs:
             adb exec-out screencap -p > emulator_output/01_main_dashboard.png
             
             # 2. 10-Second Countdown Incoming Call
-            adb shell am start -n com.example.callassistant/.ui.IncomingCallActivity --es callerName "Ramesh (Swiggy Delivery)" --es callerNumber "+91 98765 43210"
+            adb shell am start -n com.example.callassistant/.ui.IncomingCallActivity --es callerName "Ramesh - Swiggy Delivery" --es callerNumber "+919876543210"
             sleep 4
             adb exec-out screencap -p > emulator_output/02_incoming_10s_countdown.png
             
             # 3. Active AI Screening & Takeover Button
-            adb shell am start -n com.example.callassistant/.ui.ActiveCallActivity --es callerName "Ramesh (Swiggy Delivery)"
+            adb shell am start -n com.example.callassistant/.ui.ActiveCallActivity --es callerName "Ramesh - Swiggy Delivery"
             sleep 4
             adb exec-out screencap -p > emulator_output/03_active_ai_takeover.png
             
