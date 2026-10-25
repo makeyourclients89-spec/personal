@@ -1,4 +1,4 @@
-name: Build Native Android APK
+name: Build & Run on Android Emulator
 
 on:
   push:
@@ -26,8 +26,8 @@ jobs:
           npm install
           npm test
 
-  build-android:
-    name: Build Native Android APK & Unit Tests
+  build-and-run-emulator:
+    name: Build Native APK & Run on Android Emulator
     runs-on: ubuntu-latest
     needs: backend-test
     steps:
@@ -61,4 +61,55 @@ jobs:
         with:
           name: NativeCallAssistant-debug-apk
           path: android_native/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Enable KVM group perms for Hardware Acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+
+      - name: Run Native App on Android Emulator & Capture Screen
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
+          script: |
+            mkdir -p emulator_output
+            adb wait-for-device
+            adb install -r android_native/app/build/outputs/apk/debug/app-debug.apk
+            
+            # 1. Main Dashboard
+            adb shell am start -n com.example.callassistant/.ui.MainActivity
+            sleep 4
+            adb exec-out screencap -p > emulator_output/01_main_dashboard.png
+            
+            # 2. 10-Second Countdown Incoming Call
+            adb shell am start -n com.example.callassistant/.ui.IncomingCallActivity --es callerName "Ramesh (Swiggy Delivery)" --es callerNumber "+91 98765 43210"
+            sleep 4
+            adb exec-out screencap -p > emulator_output/02_incoming_10s_countdown.png
+            
+            # 3. Active AI Screening & Takeover Button
+            adb shell am start -n com.example.callassistant/.ui.ActiveCallActivity --es callerName "Ramesh (Swiggy Delivery)"
+            sleep 4
+            adb exec-out screencap -p > emulator_output/03_active_ai_takeover.png
+            
+            # 4. Call Details & Recording Player
+            adb shell am start -n com.example.callassistant/.ui.CallDetailActivity --es callId "seed_01"
+            sleep 4
+            adb exec-out screencap -p > emulator_output/04_call_detail_recording.png
+            
+            # Dump Logs
+            adb logcat -d > emulator_output/emulator_logcat.txt
+            echo "Emulator execution and screen captures completed successfully!"
+
+      - name: Upload Emulator Screenshots and Logs Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Emulator-Screenshots-and-Logs
+          path: emulator_output/
           retention-days: 14
