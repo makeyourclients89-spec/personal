@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [ "**" ]
   workflow_dispatch:
+    inputs:
+      api_level:
+        description: 'Android Emulator API Level'
+        required: true
+        default: '29'
+        type: choice
+        options:
+          - '29'
+          - '30'
+          - '34'
 
 jobs:
   backend-test:
@@ -69,10 +79,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm || true
 
-      - name: Run Native App on Android Emulator & Capture Screen
-        uses: reactivecircus/android-emulator-runner@v2
+      - name: Android Emulator Runner
+        uses: ReactiveCircus/android-emulator-runner@v2.38.0
         with:
-          api-level: 29
+          api-level: ${{ inputs.api_level || '29' }}
           target: default
           arch: x86_64
           disable-animations: true
