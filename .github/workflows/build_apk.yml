@@ -40,11 +40,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./android_native/gradlew
+      - name: Generate Gradle wrapper jar & permissions
+        run: |
+          cd android_native
+          gradle wrapper --gradle-version 8.5
+          chmod +x ./gradlew
 
       - name: Run Native Android Unit Tests
         run: |
