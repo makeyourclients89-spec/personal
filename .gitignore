@@ -23,3 +23,11 @@ Thumbs.db
 backend/node_modules/
 node_modules/
 
+# APK & Build outputs
+*.apk
+*.zip
+latest_apk_build/
+android_native/.gradle/
+android_native/build/
+android_native/app/build/
+
