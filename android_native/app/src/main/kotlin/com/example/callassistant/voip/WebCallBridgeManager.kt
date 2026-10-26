@@ -36,11 +36,32 @@ object WebCallBridgeManager {
     private val _currentCallSid = MutableLiveData<String?>(null)
     val currentCallSid: LiveData<String?> = _currentCallSid
 
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var mainHandler: Handler? = null
 
     fun init(appContext: Context) {
         context = appContext
+        try {
+            mainHandler = Handler(Looper.getMainLooper())
+        } catch (_: Exception) {}
         connect()
+    }
+
+    private fun postToMain(action: () -> Unit) {
+        val h = mainHandler
+        if (h != null) {
+            h.post(action)
+        } else {
+            action()
+        }
+    }
+
+    private fun postDelayedToMain(delayMs: Long, action: () -> Unit) {
+        val h = mainHandler
+        if (h != null) {
+            h.postDelayed(action, delayMs)
+        } else {
+            action()
+        }
     }
 
     fun getWebCallingUrl(): String {
@@ -55,35 +76,35 @@ object WebCallBridgeManager {
 
         val request = Request.Builder().url(wsUrl).build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(ws: WebSocket, response: Response) {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Bridge Connected!")
-                mainHandler.post { _isConnected.value = true }
+                postToMain { _isConnected.value = true }
                 // Register as Android Client
                 val reg = JSONObject().apply {
                     put("event", "REGISTER_ANDROID_APP")
                 }
-                ws.send(reg.toString())
+                webSocket.send(reg.toString())
             }
 
-            override fun onMessage(ws: WebSocket, text: String) {
+            override fun onMessage(webSocket: WebSocket, text: String) {
                 Log.d(TAG, "Bridge message: $text")
                 handleMessage(text)
             }
 
-            override fun onClosed(ws: WebSocket, code: Int, reason: String) {
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 Log.d(TAG, "Bridge closed")
-                mainHandler.post { _isConnected.value = false }
-                webSocket = null
+                postToMain { _isConnected.value = false }
+                this@WebCallBridgeManager.webSocket = null
                 // Reconnect after 3s
-                mainHandler.postDelayed({ connect() }, 3000)
+                postDelayedToMain(3000) { connect() }
             }
 
-            override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e(TAG, "Bridge failure: ${t.message}")
-                mainHandler.post { _isConnected.value = false }
-                webSocket = null
+                postToMain { _isConnected.value = false }
+                this@WebCallBridgeManager.webSocket = null
                 // Try fallback to 10.0.2.2 if on emulator or retry
-                mainHandler.postDelayed({ connect() }, 5000)
+                postDelayedToMain(5000) { connect() }
             }
         })
     }
@@ -97,7 +118,7 @@ object WebCallBridgeManager {
                     val callerName = json.optString("callerName", "Web Caller (Phone 2)")
                     val callerNumber = json.optString("callerNumber", "Free Web Link")
 
-                    mainHandler.post {
+                    postToMain {
                         _currentCallSid.value = callSid
 
                         val persona = CallerPersona(
@@ -129,7 +150,7 @@ object WebCallBridgeManager {
 
                 "AI_ANSWERED" -> {
                     val greeting = json.optString("greeting", "Namaste! Main AI Assistant hoon.")
-                    mainHandler.post {
+                    postToMain {
                         TwilioVoiceManager.startAiScreening(isAutoTriggered = true)
                         TwilioVoiceManager.addExternalTranscript("ai", greeting)
                     }
@@ -138,7 +159,7 @@ object WebCallBridgeManager {
                 "TRANSCRIPT_UPDATE" -> {
                     val callerText = json.optString("callerText")
                     val aiText = json.optString("aiText")
-                    mainHandler.post {
+                    postToMain {
                         if (callerText.isNotEmpty()) {
                             TwilioVoiceManager.addExternalTranscript("caller", callerText)
                         }
@@ -149,7 +170,7 @@ object WebCallBridgeManager {
                 }
 
                 "CALL_ENDED" -> {
-                    mainHandler.post {
+                    postToMain {
                         _currentCallSid.value = null
                         TwilioVoiceManager.declineCall()
                     }
