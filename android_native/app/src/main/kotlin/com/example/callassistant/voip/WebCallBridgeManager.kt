@@ -101,10 +101,14 @@ object WebCallBridgeManager {
                         _currentCallSid.value = callSid
 
                         val persona = CallerPersona(
+                            id = callSid,
                             name = callerName,
                             number = callerNumber,
+                            tag = "Web Call",
                             category = "Direct Call",
-                            scriptTurns = emptyList()
+                            urgency = "Normal",
+                            expectedIntent = "Direct web call conversation",
+                            script = emptyList()
                         )
 
                         // Trigger native ringing & 10s countdown
