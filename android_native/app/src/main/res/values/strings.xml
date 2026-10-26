@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AI Call Assistant</string>
+    <string name="app_name">AI Assistant v2 (Native)</string>
     <string name="start_demo_call">Demo Call शुरू करें</string>
     <string name="enable_screening">Grant Permissions</string>
     <string name="takeover_call">Take Over Call (Call Khud Uthayein)</string>
